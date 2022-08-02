@@ -4,6 +4,8 @@ import mediapipe as mp
 import time
 import numpy as np
 import math
+import pygame
+from pygame import mixer
 
 cap = cv2.VideoCapture(0)
 
@@ -26,6 +28,13 @@ recording = []
 dpx = 0
 dpy = 0
 
+pygame.init()
+
+pygame.mixer.set_num_channels(2)
+
+snare = mixer.Sound('snare.wav')
+kick = mixer.Sound('kick.wav')
+
 
 def draw_hands(img, results, fps):
     global finger_pos
@@ -40,20 +49,21 @@ def draw_hands(img, results, fps):
                     finger_pos.append(math.sqrt(lm.x**2+lm.y**2))
                     if len(finger_pos) > 4:
                         finger_pos.pop(0)
-                    dif_finger_pos = np.diff(np.diff(finger_pos)/fps)/fps
+                    diff_finger_pos = np.diff(np.diff(finger_pos)/fps)/fps
                     h, w, c = img.shape
-                    if can_hit < 1 and abs(lm.x * w - dpx) < .03 * w and abs(lm.y * h - dpy) < 0.03 * h and dif_finger_pos[0] < -0.00002:
+                    print(diff_finger_pos)
+                    if can_hit < 1 and abs(lm.x * w - dpx) < .05 * w and abs(lm.y * h - dpy) < 0.05 * h and diff_finger_pos[0] < -0.00011:
                         can_hit = 2
                         hit = int(lm.x * w), int(lm.y*h)
                         print(id, lm)
                     else:
                         can_hit -= 1
 
-            #     h, w, c = img.shape
-            #     cx, cy = int(lm.x * w), int(lm.y*h)
-            #     cv2.circle(img, (cx, cy), 3, (255, 0, 255), cv2.FILLED)
+                h, w, c = img.shape
+                cx, cy = int(lm.x * w), int(lm.y*h)
+                cv2.circle(img, (cx, cy), 3, (255, 0, 255), cv2.FILLED)
 
-            # mpDraw.draw_landmarks(img, handLms, mpHands.HAND_CONNECTIONS)
+            mpDraw.draw_landmarks(img, handLms, mpHands.HAND_CONNECTIONS)
             return hit
 
 
@@ -85,6 +95,8 @@ while(True):
     if cv2.waitKey(1) & 0xFF == ord('s'):
         break
 
+sTime = time.time()
+
 while(True):
     success, img = cap.read()
     imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -96,6 +108,7 @@ while(True):
     hit = draw_hands(img, results, fps)
 
     if hit != -1 and hit != None:
+        snare.play()
         cv2.circle(img, hit, 20, (255, 0, 0), -1)
         recording.append((time.time()-sTime, 1))
         print(recording)
